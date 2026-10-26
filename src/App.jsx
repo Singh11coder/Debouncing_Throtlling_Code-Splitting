@@ -1,78 +1,74 @@
-
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 
 const App = () => {
-  const [products, setProducts] = useState([]);
-  const [searchProduct, setSearchProduct] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState([]);
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [products,setProducts] = useState([]);
+   const [value,setValue] = useState("");
+   const[searchProducts, setSearchProducts] = useState([]);
+   const [scrollY,setScrollY] = useState(null);
+   
+  let throttle = false;
+  const fetchData = async() => {
+    try{
+      const res = await fetch("https://dummyjson.com/products");
+      const data = await res.json();
+   
+      setProducts(data.products);
+    }catch(error){
+      console.log(error.message);
+    }
+  }
 
-  // Fetch products once
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const res = await fetch("https://dummyjson.com/products");
+  const filteredData = () => {
+     let ans = products.filter((val) => {
+        return val.title.toLowerCase().includes(value.toLowerCase());
+     })
+     setSearchProducts(ans);
+  }
 
-        if (!res.ok) {
-          throw new Error("Failed to fetch products");
-        }
+  useEffect(()=>{
+      fetchData();
+  },[]);
 
-        const data = await res.json();
-        setProducts(data.products);
-        setFilteredProducts(data.products);
-      } catch (err) {
-        console.error("Error:", err.message);
-      }
-    };
+  useEffect(()=>{
+    let timeout = setTimeout(()=>{
+        filteredData();
+    },200);
+    
+    return ()=> clearTimeout(timeout);
 
-    fetchData();
-  }, []);
+  },[searchProducts]);
 
-  // Debounce search input by 2 seconds
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      setDebouncedSearch(searchProduct);
-    },100);
 
-    return () => clearTimeout(timeout);
-  }, [searchProduct]);
+  // throtlling....
+  useEffect(()=>{
+    if(throttle)return;
+   let handleScroll = () => {
+      console.log("Scrolling ....");
+      setScrollY(window.scroll);
+   }
 
-  // Filter products after debounce
-  useEffect(() => {
-    const query = debouncedSearch.toLowerCase().trim();
-
-    const arr = products.filter((product) =>
-      product.title.toLowerCase().includes(query)
-    );
-
-    setFilteredProducts(arr);
-  }, [debouncedSearch, products]);
-
+    window.addEventListener("scroll",handleScroll);
+  },[]);
+  
   return (
-    <div>
-      <input
-        value={searchProduct}
-        onChange={(e) => setSearchProduct(e.target.value)}
-        className="p-2 m-4 w-96 border rounded"
-        type="text"
-        placeholder="Search Product..."
-      />
-
-      <div className="ml-4 text-xl h-64 w-96 overflow-y-auto">
-        {filteredProducts.map((product) => (
-          <div key={product.id}>
-            <h1 className="bg-gray-200 p-2 hover:bg-gray-400 cursor-pointer">
-              {product.title}
-            </h1>
+    <div className="m-4">
+        <input 
+        value={value}
+         className="h-10 w-95 p-4 border-1"
+         type="text"
+         placeholder='Search Products...' 
+         onChange={(e) => {setValue(e.target.value)}}
+        />
+        <div className='w-screen h-screen  pr-1 bg-gray-200'>
+          {searchProducts.map((val) => {
+          return <div className="p-2 hover:bg-gray-600 hover:cursor-pointer">
+             <h1 className=" ">{val.title}</h1>
           </div>
-        ))}
-
-        {filteredProducts.length === 0 && (
-          <p className="p-2 text-gray-500">No products found.</p>
-        )}
-      </div>
+        })}
+        </div>
+        
     </div>
-  );
-};
+  )
+}
 
 export default App;
